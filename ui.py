@@ -209,7 +209,10 @@ class NIFTYFBX_PT_panel(bpy.types.Panel):
 			ph.prop(data, "use_global_output_dir", text="", icon=path_icon)
 			ph.label(text="Use Master Export Path")
 			if data.use_global_output_dir:
-				path_box.prop(data, "global_output_dir", text="", icon='FILE_FOLDER')
+				path_row = path_box.row(align=True)
+				path_row.prop(data, "global_output_dir", text="")
+				op = path_row.operator("nifty_fbx_exporter.pick_output_directory", text="", icon='FILE_FOLDER')
+				op.target = 'GLOBAL'
 
 			# Global export config toggle — when on, per-job settings are
 			# greyed out and the config drawn here applies to every job.
@@ -230,7 +233,7 @@ class NIFTYFBX_PT_panel(bpy.types.Panel):
 
 		# ── Per-job settings ────────────────────────────────────────
 		job_section = layout.box()
-		if not _toggle_row(job_section, job, "'" + job.job_name + "' Export Settings", 'PREFERENCES'):
+		if not _toggle_row(job_section, job, "'" + job.name + "' Export Settings", 'PREFERENCES'):
 			_draw_logo(layout)
 			return
 
@@ -243,11 +246,15 @@ class NIFTYFBX_PT_panel(bpy.types.Panel):
 
 		r1 = col.split(factor=SPLIT, align=True)
 		r1.label(text="  Name")
-		r1.prop(job, "job_name", text="")
+		r1.prop(job, "name", text="")
 
 		r2 = col.split(factor=SPLIT, align=True)
 		r2.label(text="  Output")
-		r2.prop(job, "output_dir", text="")
+		out_row = r2.row(align=True)
+		out_row.prop(job, "output_dir", text="")
+		op = out_row.operator("nifty_fbx_exporter.pick_output_directory", text="", icon='FILE_FOLDER')
+		op.target = 'JOB'
+		op.index = idx
 
 		if data.use_global_output_dir:
 			info = col.split(factor=SPLIT, align=True)
@@ -256,7 +263,7 @@ class NIFTYFBX_PT_panel(bpy.types.Panel):
 			info.label(text="Using master export path")
 
 		# Filename preview
-		preview_name = data.output_prefix + job.job_name + data.output_suffix + ".fbx"
+		preview_name = data.output_prefix + job.name + data.output_suffix + ".fbx"
 		r3 = col.split(factor=SPLIT, align=True)
 		r3.enabled = False
 		r3.label(text="  Preview")
@@ -355,7 +362,7 @@ class NIFTYFBX_UL_job_list(bpy.types.UIList):
 		row = layout.row(align=True)
 		if data.show_active_checkboxes:
 			row.prop(item, "is_active", text="")
-		row.prop(item, "job_name", text="", icon='PACKAGE', emboss=False)
+		row.prop(item, "name", text="", icon='PACKAGE', emboss=False)
 		# Inline select/isolate buttons let the user preview job contents
 		# without leaving the panel.
 		op_select = row.operator("nifty_fbx_exporter.job_select",  text="", icon='RESTRICT_SELECT_OFF')

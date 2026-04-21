@@ -82,7 +82,7 @@ def _post_save_handler(scene):
 	failed    = []
 
 	for idx in queue:
-		job_name = addon_data.jobs[idx].job_name
+		job_name = addon_data.jobs[idx].name
 		try:
 			_ops.run_export_job(bpy.context, addon_data, idx)
 			succeeded.append(job_name)

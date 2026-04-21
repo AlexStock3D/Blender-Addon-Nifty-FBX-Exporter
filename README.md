@@ -3,7 +3,7 @@
 </p>
 
 <p align="left">
-  <img src="https://img.shields.io/badge/Blender-4.0+-orange?logo=blender&logoColor=white" alt="Blender 4.0+">
+  <img src="https://img.shields.io/badge/Blender-4.0%20to%205.0-orange?logo=blender&logoColor=white" alt="Blender 4.0 to 5.0">
   <img src="https://img.shields.io/badge/License-Free%20Personal%20%26%20Commercial-blue" alt="Free for personal and commercial use">
   <img src="https://img.shields.io/badge/Author-Alexander%20Stock-lightgrey" alt="Author: Alexander Stock">
 </p>

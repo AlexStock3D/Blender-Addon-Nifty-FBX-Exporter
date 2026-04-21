@@ -1,4 +1,4 @@
-﻿'''
+'''
 ─────────────────────────────────────────
   Nifty FBX Exporter
   Blender Addon by Alexander Stock
@@ -10,13 +10,14 @@ bl_info = {
 	"name": "Nifty FBX Exporter",
 	"description": "Batch-export named groups of objects and collections as individual FBX files",
 	"author": "Alexander Stock",
-	"version": (1, 0, 0),
+	"version": (1, 0, 1),
 	"blender": (4, 0, 0),
 	"location": "View3D > Sidebar > Nifty FBX Exporter",
 	"category": "Import-Export"
 	}
 
 import bpy
+import bpy.utils.previews
 import importlib
 import sys
 import os

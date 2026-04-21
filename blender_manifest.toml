@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "nifty_fbx_exporter"
-version = "1.0.0"
+version = "1.0.1"
 name = "Nifty FBX Exporter"
 tagline = "Batch-export named groups of objects and collections as individual FBX files"
 maintainer = "Alexander Stock"

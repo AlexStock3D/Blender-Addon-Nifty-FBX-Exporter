@@ -509,7 +509,7 @@ def _resolve_output_path(job, addon_data):
 		out_dir = os.path.join(blend_dir, out_dir)
 	if out_dir.lower().endswith('.fbx'):
 		return out_dir
-	filename = addon_data.output_prefix + job.job_name + addon_data.output_suffix + '.fbx'
+	filename = addon_data.output_prefix + job.name + addon_data.output_suffix + '.fbx'
 	return os.path.join(out_dir, filename)
 
 
@@ -603,18 +603,18 @@ def run_export_job(context, addon_data, job_index):
 	if not bpy.data.filepath:
 		raise RuntimeError("The .blend file has not been saved. Save before exporting.")
 
-	print("\n[Nifty FBX Exporter] Job #{} — '{}'".format(job_index, job.job_name))
+	print("\n[Nifty FBX Exporter] Job #{} — '{}'".format(job_index, job.name))
 
 	# ── 1. Collect targets (read-only; failures here need no cleanup) ────────
 	raw_targets = _collect_targets(job)
 	if not raw_targets:
-		raise RuntimeError("Job '{}': no source objects are assigned.".format(job.job_name))
+		raise RuntimeError("Job '{}': no source objects are assigned.".format(job.name))
 
 	targets = _apply_type_filter(raw_targets, fbx_cfg.source_rules.object_filter)
 	if not targets:
 		raise RuntimeError(
 			"Job '{}': no objects survive the type filter. "
-			"Check 'Allowed Object Types' in Source Rules.".format(job.job_name)
+			"Check 'Allowed Object Types' in Source Rules.".format(job.name)
 		)
 
 	# ── 2. Snapshot + prepare scene state ────────────────────────────────────
@@ -629,7 +629,7 @@ def run_export_job(context, addon_data, job_index):
 		# ── 3. Select exactly the targets ────────────────────────────────────
 		_select_targets(targets, context)
 		if not context.selected_objects:
-			raise RuntimeError("Job '{}': selection is empty after preparation.".format(job.job_name))
+			raise RuntimeError("Job '{}': selection is empty after preparation.".format(job.name))
 
 		_log_export_contents(job)
 
@@ -642,6 +642,7 @@ def run_export_job(context, addon_data, job_index):
 		transform_obj, transform_original = _apply_transform_override(job, context.view_layer)
 
 		# ── 6. Run FBX export ─────────────────────────────────────────────────
+		os.makedirs(os.path.dirname(out_path), exist_ok=True)
 		_call_fbx_exporter(out_path, fbx_cfg)
 		print("[Nifty FBX Exporter] Done.")
 
@@ -701,7 +702,7 @@ class NIFTYFBX_OT_export_all(bpy.types.Operator):
 			bpy.ops.view3d.localview()
 
 		if failed:
-			lines = [jobs[i].job_name + ": " + msg for i, msg in failed.items()]
+			lines = [jobs[i].name + ": " + msg for i, msg in failed.items()]
 			self.report({'ERROR'}, "Nifty FBX Exporter: Failed jobs:\n" + "\n".join(lines))
 			return {'CANCELLED'} if not succeeded else {'FINISHED'}
 
@@ -732,7 +733,7 @@ class NIFTYFBX_OT_export_single(bpy.types.Operator):
 			if in_local_view:
 				bpy.ops.view3d.localview()
 
-		job_name = addon_data.jobs[self.index].job_name
+		job_name = addon_data.jobs[self.index].name
 		self.report({'INFO'}, "Nifty FBX Exporter: Exported '{}' → {}".format(job_name, out_path))
 		return {'FINISHED'}
 
@@ -786,6 +787,15 @@ def _make_job_copy(src, jobs_collection):
 	return dst
 
 
+def _resolve_directory_path(path_value):
+	"""Resolve a stored output directory to an absolute on-disk folder path."""
+	path = path_value or "NiftyFBXExport/"
+	if not os.path.isabs(path):
+		blend_dir = os.path.dirname(bpy.data.filepath) if bpy.data.filepath else os.path.expanduser("~")
+		path = os.path.join(blend_dir, path)
+	return os.path.normpath(path)
+
+
 def _resolve_job_objects(job, context):
 	"""Ensure all job sources are visible, then return the complete set of objects
 	the job references across its collections and direct object slots.
@@ -813,7 +823,7 @@ class NIFTYFBX_OT_job_add(bpy.types.Operator):
 	def execute(self, context):
 		addon_data = context.scene.nifty_fbx_exporter
 		entry = addon_data.jobs.add()
-		entry.job_name = "Job " + str(len(addon_data.jobs))
+		entry.name = "Job " + str(len(addon_data.jobs))
 		addon_data.active_job_idx = len(addon_data.jobs) - 1
 		return {'FINISHED'}
 
@@ -833,13 +843,13 @@ class NIFTYFBX_OT_job_add_from_collection(bpy.types.Operator):
 
 		addon_data = context.scene.nifty_fbx_exporter
 		entry = addon_data.jobs.add()
-		entry.job_name = collections[0].name if len(collections) == 1 else "Multiple Collections"
+		entry.name = collections[0].name if len(collections) == 1 else "Multiple Collections"
 		for col in collections:
 			entry.collections.add().ref = col
 		addon_data.active_job_idx = len(addon_data.jobs) - 1
 
 		self.report({'INFO'}, "Nifty FBX Exporter: Created '{}' with: {}".format(
-			entry.job_name, ", ".join(c.name for c in collections)))
+			entry.name, ", ".join(c.name for c in collections)))
 		return {'FINISHED'}
 
 
@@ -878,7 +888,7 @@ class NIFTYFBX_OT_job_duplicate(bpy.types.Operator):
 		addon_data = context.scene.nifty_fbx_exporter
 		src = _active_job(addon_data)
 		copy = _make_job_copy(src, addon_data.jobs)
-		copy.job_name = src.job_name + " Copy"
+		copy.name = src.name + " Copy"
 		addon_data.active_job_idx = len(addon_data.jobs) - 1
 		return {'FINISHED'}
 
@@ -1018,6 +1028,47 @@ class NIFTYFBX_OT_source_object_remove(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class NIFTYFBX_OT_pick_output_directory(bpy.types.Operator):
+	"""Open a folder picker seeded with the current output path."""
+	bl_idname = "nifty_fbx_exporter.pick_output_directory"
+	bl_label = "Pick Output Directory"
+	bl_options = {'INTERNAL'}
+
+	target: bpy.props.EnumProperty(
+		name="Target",
+		items=(('JOB', 'Job', ''), ('GLOBAL', 'Global', '')),
+		default='JOB',
+	)
+
+	index: bpy.props.IntProperty(name="Job Index", default=-1)
+	directory: bpy.props.StringProperty(subtype='DIR_PATH')
+
+	def invoke(self, context, event):
+		addon_data = context.scene.nifty_fbx_exporter
+		if self.target == 'GLOBAL':
+			seed = addon_data.global_output_dir
+		else:
+			idx = _resolve_job_idx(self.index, addon_data)
+			seed = addon_data.jobs[idx].output_dir
+
+		self.directory = _resolve_directory_path(seed)
+		context.window_manager.fileselect_add(self)
+		return {'RUNNING_MODAL'}
+
+	def execute(self, context):
+		addon_data = context.scene.nifty_fbx_exporter
+		picked = self.directory.replace("\\", "/")
+		if not picked.endswith("/"):
+			picked += "/"
+
+		if self.target == 'GLOBAL':
+			addon_data.global_output_dir = picked
+		else:
+			idx = _resolve_job_idx(self.index, addon_data)
+			addon_data.jobs[idx].output_dir = picked
+		return {'FINISHED'}
+
+
 # ─── Viewport selection / isolation operators ─────────────────────────────────
 
 def _enter_object_mode(context):
@@ -1054,7 +1105,7 @@ class NIFTYFBX_OT_job_select(bpy.types.Operator):
 		objects = _resolve_job_objects(job, context)
 
 		if not objects:
-			show_error_popup("Job '{}' has no valid objects.".format(job.job_name))
+			show_error_popup("Job '{}' has no valid objects.".format(job.name))
 			return {'CANCELLED'}
 
 		if context.space_data and context.space_data.local_view:
@@ -1090,7 +1141,7 @@ class NIFTYFBX_OT_job_isolate(bpy.types.Operator):
 		objects = _resolve_job_objects(job, context)
 
 		if not objects:
-			show_error_popup("Job '{}' has no valid objects.".format(job.job_name))
+			show_error_popup("Job '{}' has no valid objects.".format(job.name))
 			return {'CANCELLED'}
 
 		# Reset to full scene view before isolating, so local view contains exactly
@@ -1147,6 +1198,7 @@ def register():
 	bpy.utils.register_class(NIFTYFBX_OT_source_object_add)
 	bpy.utils.register_class(NIFTYFBX_OT_source_object_add_selected)
 	bpy.utils.register_class(NIFTYFBX_OT_source_object_remove)
+	bpy.utils.register_class(NIFTYFBX_OT_pick_output_directory)
 
 	bpy.utils.register_class(NIFTYFBX_OT_job_select)
 	bpy.utils.register_class(NIFTYFBX_OT_job_isolate)
@@ -1172,6 +1224,7 @@ def unregister():
 	bpy.utils.unregister_class(NIFTYFBX_OT_source_object_add)
 	bpy.utils.unregister_class(NIFTYFBX_OT_source_object_add_selected)
 	bpy.utils.unregister_class(NIFTYFBX_OT_source_object_remove)
+	bpy.utils.unregister_class(NIFTYFBX_OT_pick_output_directory)
 
 	bpy.utils.unregister_class(NIFTYFBX_OT_job_select)
 	bpy.utils.unregister_class(NIFTYFBX_OT_job_isolate)

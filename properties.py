@@ -42,6 +42,13 @@ def _copy_ref_collection(dst_coll, src_coll):
         dst_coll.add().ref = item.ref
 
 
+def _sanitize_global_output_dir(self, context):
+    # Keep slash style consistent across platforms and Blender versions.
+    clean_path = self.global_output_dir.replace("\\", "/")
+    if clean_path != self.global_output_dir:
+        self.global_output_dir = clean_path
+
+
 # -----------------------------------------------------------------------------
 # Scene reference wrappers for objects / collections
 # -----------------------------------------------------------------------------
@@ -403,7 +410,7 @@ class NIFTYFBX_ExportJob(bpy.types.PropertyGroup):
         default=True
     )
 
-    job_name: StringProperty(
+    name: StringProperty(
         name="Name",
         default="Untitled Export Package"
     )
@@ -418,7 +425,6 @@ class NIFTYFBX_ExportJob(bpy.types.PropertyGroup):
 
     output_dir: StringProperty(
         name="Output",
-        subtype="DIR_PATH",
         default="NiftyFBXExport/",
         update=_sanitize_output_dir,
     )
@@ -484,7 +490,7 @@ def clone_job(dst, src):
     """Full deep-copy of src into dst for the duplicate operator.
     Copies all scalar fields, then rebuilds both source collections, then
     delegates export_cfg cloning to clone_export_config()."""
-    dst.job_name            = src.job_name
+    dst.name                = src.name
     dst.output_dir          = src.output_dir
     dst.is_active           = src.is_active
     dst.transform_enabled   = src.transform_enabled
@@ -563,9 +569,9 @@ class NIFTYFBX_AddonState(bpy.types.PropertyGroup):
 
     global_output_dir: StringProperty(
         name="Global Output Directory",
-        subtype="DIR_PATH",
         description="Shared output directory used when the global path toggle is on",
-        default="NiftyFBXExport/"
+        default="NiftyFBXExport/",
+        update=_sanitize_global_output_dir,
     )
 
     global_export_config: PointerProperty(
