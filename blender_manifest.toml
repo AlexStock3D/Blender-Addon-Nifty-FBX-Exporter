@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+
+id = "nifty_fbx_exporter"
+version = "1.0.0"
+name = "Nifty FBX Exporter"
+tagline = "Batch-export named groups of objects and collections as individual FBX files"
+maintainer = "Alexander Stock"
+type = "add-on"
+
+tags = ["Import-Export"]
+
+blender_version_min = "4.0.0"
+
+license = [
+    "SPDX:MIT",
+]
