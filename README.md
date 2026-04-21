@@ -54,11 +54,11 @@
 ### 🖥️ User Interface
 
 <p align="left">
-  <img src="images/screenshot_01.png" alt="Nifty FBX Exporter — Screenshot 1" width="60%">
+  <img src="images/screenshot_01.png" alt="Nifty FBX Exporter — Screenshot 1" width="80%">
 </p>
 
 <p align="left">
-  <img src="images/screenshot_02.png" alt="Nifty FBX Exporter — Screenshot 2" width="60%">
+  <img src="images/screenshot_02.png" alt="Nifty FBX Exporter — Screenshot 2" width="80%">
 </p>
 
 ---
